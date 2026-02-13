@@ -1,4 +1,4 @@
-.PHONY: dev server client test build clean clean-dev clean-prod reset reset-dev reset-prod install prod
+.PHONY: dev server client test build clean clean-dev clean-prod reset reset-dev reset-prod install prod standalone-win standalone-mac standalone-linux
 
 make help:
 	@echo "Usage: make <target>"
@@ -16,6 +16,9 @@ make help:
 	@echo "  reset-dev - Reset dev: delete dev DB and restart dev"
 	@echo "  reset-prod - Reset prod: delete prod DB and rebuild+start prod"
 	@echo "  reset     - Default reset targets dev"
+	@echo "  standalone-win - Build standalone Windows binary"
+	@echo "  standalone-mac - Build standalone macOS binary"
+	@echo "  standalone-linux - Build standalone Linux binary"
 
 # Start both server and client (dev DB)
 dev:
@@ -68,3 +71,15 @@ reset-prod: clean-prod prod
 
 # Default reset targets dev
 reset: reset-dev
+
+# Build standalone Windows binary
+standalone-win:
+	npm run build:standalone:win
+
+# Build standalone macOS binary
+standalone-mac:
+	npm run build:standalone:mac
+
+# Build standalone Linux binary
+standalone-linux:
+	npm run build:standalone:linux

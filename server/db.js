@@ -6,7 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dbFile = process.env.NODE_ENV === 'production'
   ? 'forbidden_north.db'
   : 'forbidden_north_dev.db';
-const dbPath = path.join(__dirname, dbFile);
+const dbPath = path.join(process.env.DB_DIR || __dirname, dbFile);
 
 const db = new Database(dbPath);
 db.pragma('journal_mode = WAL');

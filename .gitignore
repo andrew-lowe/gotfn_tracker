@@ -3,3 +3,8 @@ dist/
 server/*.db
 server/*.db-shm
 server/*.db-wal
+build/
+release/
+*.db
+*.db-shm
+*.db-wal
