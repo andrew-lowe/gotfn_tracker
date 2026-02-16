@@ -125,4 +125,62 @@ if (needsCrossPlatformNative && fs.existsSync(nativeModuleBackup)) {
   fs.unlinkSync(nativeModuleBackup);
 }
 
-console.log(`\nDone! Binary written to: release/${outputName}\n`);
+// (Mac only) Wrap in .app bundle and zip so users can double-click without chmod
+if (platformKey === 'mac') {
+  console.log('\nCreating macOS .app bundle...');
+  const appName = 'Forbidden North Tracker';
+  const appDir = path.join(root, 'release', `${appName}.app`);
+  const contentsDir = path.join(appDir, 'Contents');
+  const macosDir = path.join(contentsDir, 'MacOS');
+  const resourcesDir = path.join(contentsDir, 'Resources');
+
+  fs.mkdirSync(macosDir, { recursive: true });
+  fs.mkdirSync(resourcesDir, { recursive: true });
+
+  // Move pkg binary into Resources
+  fs.renameSync(
+    path.join(root, 'release', outputName),
+    path.join(resourcesDir, 'server'),
+  );
+
+  // Create launch script (the CFBundleExecutable)
+  const launchScript = `#!/bin/bash
+DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
+exec "$DIR/server"
+`;
+  fs.writeFileSync(path.join(macosDir, appName), launchScript);
+  fs.chmodSync(path.join(macosDir, appName), 0o755);
+
+  // Create Info.plist
+  fs.writeFileSync(path.join(contentsDir, 'Info.plist'), `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key>
+    <string>${appName}</string>
+    <key>CFBundleName</key>
+    <string>${appName}</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.forbiddennorth.tracker</string>
+    <key>CFBundleVersion</key>
+    <string>${version}</string>
+    <key>CFBundleShortVersionString</key>
+    <string>${version}</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>10.15</string>
+</dict>
+</plist>`);
+
+  // Zip the .app (preserves executable permissions)
+  const zipName = `Forbidden-North-Tracker-${version}-mac.zip`;
+  run(`cd release && zip -ry "${zipName}" "${appName}.app"`);
+
+  // Clean up the loose .app directory
+  fs.rmSync(appDir, { recursive: true });
+
+  console.log(`\nDone! Mac app written to: release/${zipName}\n`);
+} else {
+  console.log(`\nDone! Binary written to: release/${outputName}\n`);
+}
