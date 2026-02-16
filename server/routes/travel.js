@@ -342,7 +342,11 @@ router.post('/set-state', (req, res) => {
   }
   if (Object.keys(updates).length === 0) return res.status(400).json({ error: 'No valid fields' });
   updateState(updates);
-  res.json({ state: getState() });
+  const newState = getState();
+  if (req.body.log_message) {
+    addLog(newState.current_year, newState.current_month, newState.current_day_of_month, newState.current_hour, 'time', req.body.log_message);
+  }
+  res.json({ state: newState });
 });
 
 // POST /api/travel/roll-weather — Roll weather for current season

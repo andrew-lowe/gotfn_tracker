@@ -323,14 +323,17 @@ export default function TravelPanel() {
       }
     }
 
+    const label = hours >= 1 ? `${hours}h` : `${Math.round(hours * 60)}m`;
     try {
       await api.setTravelState({
         current_year: year,
         current_month: month,
         current_day_of_month: dayOfMonth,
         current_hour: Math.round(newHour * 100) / 100,
+        log_message: `Advanced time by ${label}.`,
       });
       await loadState();
+      await loadLogs();
     } catch (e) {
       setLastResult({ type: 'error', data: { message: e.message } });
     }
@@ -413,15 +416,20 @@ export default function TravelPanel() {
     if (isNaN(month) || month < 1 || month > monthCount) return;
     if (isNaN(dayOfMonth) || dayOfMonth < 1 || dayOfMonth > getDaysForMonth(month)) return;
     if (isNaN(hour) || hour < 0 || hour >= 24) return;
+    const monthName = HADEAN_MONTHS[month] || month;
+    const hh = String(parseInt(editHour, 10)).padStart(2, '0');
+    const mm = String(parseInt(editMinute, 10)).padStart(2, '0');
     try {
       await api.setTravelState({
         current_year: year,
         current_month: month,
         current_day_of_month: dayOfMonth,
         current_hour: Math.round(hour * 100) / 100,
+        log_message: `Time set to ${dayOfMonth} ${monthName} ${year}, ${hh}:${mm}.`,
       });
       setEditingState(false);
       await loadState();
+      await loadLogs();
     } catch (e) {
       setLastResult({ type: 'error', data: { message: e.message } });
     }
