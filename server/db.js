@@ -131,6 +131,13 @@ export function initializeDatabase() {
       era_name TEXT NOT NULL DEFAULT 'P.I.'
     );
 
+    CREATE TABLE IF NOT EXISTS cold_gear_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      temp_shift INTEGER NOT NULL DEFAULT 0,
+      negates_gear INTEGER NOT NULL DEFAULT 0
+    );
+
     CREATE TABLE IF NOT EXISTS calendar_months (
       month_number INTEGER PRIMARY KEY,
       name TEXT NOT NULL,

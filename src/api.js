@@ -61,6 +61,11 @@ export const getSessionNotes = (sessionId) => request(`/sessions/${sessionId}/no
 export const renameSession = (sessionId, name) => request(`/sessions/${sessionId}`, { method: 'PATCH', body: { name } });
 export const deleteSession = (sessionId) => request(`/sessions/${sessionId}`, { method: 'DELETE' });
 
+// Cold Gear
+export const getColdGear = () => request('/cold-gear');
+export const createColdGear = (data) => request('/cold-gear', { method: 'POST', body: data });
+export const deleteColdGear = (id) => request(`/cold-gear/${id}`, { method: 'DELETE' });
+
 // Calendar
 export const getCalendar = () => request('/calendar');
 export const saveCalendar = (data) => request('/calendar', { method: 'PUT', body: data });

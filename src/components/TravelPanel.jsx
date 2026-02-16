@@ -85,7 +85,12 @@ export default function TravelPanel() {
   const [sessionNotes, setSessionNotes] = useState([]);
   const [noteText, setNoteText] = useState('');
   const [climateZone, setClimateZone] = useState('boreal');
-  const [clothingMod, setClothingMod] = useState('0');
+  const [clothingMod, setClothingMod] = useState('');
+  const [coldGearItems, setColdGearItems] = useState([]);
+  const [showAddGear, setShowAddGear] = useState(false);
+  const [newGearName, setNewGearName] = useState('');
+  const [newGearShift, setNewGearShift] = useState(0);
+  const [newGearNegates, setNewGearNegates] = useState(false);
 
   const loadState = useCallback(async () => {
     try {
@@ -152,11 +157,24 @@ export default function TravelPanel() {
     }
   }, [viewingSessionId]);
 
+  const loadColdGear = useCallback(async () => {
+    try {
+      const items = await api.getColdGear();
+      setColdGearItems(items);
+      if (items.length > 0 && !clothingMod) {
+        setClothingMod(String(items[0].id));
+      }
+    } catch (e) {
+      console.error('Failed to load cold gear:', e);
+    }
+  }, []);
+
   useEffect(() => {
     loadState();
     loadTerrains();
     loadSessions();
-  }, [loadState, loadTerrains, loadSessions]);
+    loadColdGear();
+  }, [loadState, loadTerrains, loadSessions, loadColdGear]);
 
   useEffect(() => {
     if (viewingSessionId) {
@@ -565,6 +583,12 @@ export default function TravelPanel() {
           {/* Travel Actions */}
           <div className="card">
             <h3 className="mb-1">Actions</h3>
+            {!selectedTerrainId && (
+              <div className="weather-fx-line hypo" style={{ marginBottom: '0.75rem' }}>
+                <span className="weather-fx-tag hypo">No Terrain</span>
+                Select a terrain type below to enable actions.
+              </div>
+            )}
             <div className="travel-actions">
               <button className="btn btn-warning" onClick={handleWanderCheck} disabled={!selectedTerrain || !isViewingActive}>
                 Check Wandering Monsters
@@ -658,14 +682,87 @@ export default function TravelPanel() {
                   value={clothingMod}
                   onChange={(e) => setClothingMod(e.target.value)}
                 >
-                  <option value="0">No cold gear</option>
-                  <option value="1">Light cold gear</option>
-                  <option value="2">Heavy cold gear</option>
-                  <option value="wet">Wet</option>
+                  {coldGearItems.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name} ({item.temp_shift >= 0 ? '+' : ''}{item.temp_shift}{item.negates_gear ? ', negates gear' : ''})
+                    </option>
+                  ))}
                 </select>
+                <button
+                  className="btn btn-sm btn-secondary"
+                  onClick={() => setShowAddGear(!showAddGear)}
+                  title="Manage cold gear items"
+                  style={{ padding: '0.2rem 0.5rem', fontSize: '1rem', lineHeight: 1 }}
+                >
+                  {showAddGear ? '×' : '+'}
+                </button>
                 <button className="btn btn-sm btn-primary" onClick={handleRollWeather} disabled={!isViewingActive}>Roll Weather</button>
               </div>
             </div>
+            {showAddGear && (
+              <div style={{ padding: '0.5rem 0', borderBottom: '1px solid var(--border)', marginBottom: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                  <input
+                    className="form-control"
+                    type="text"
+                    placeholder="Name"
+                    value={newGearName}
+                    onChange={(e) => setNewGearName(e.target.value)}
+                    style={{ width: '120px' }}
+                  />
+                  <label style={{ fontSize: '0.85rem', margin: 0 }}>Shift:</label>
+                  <input
+                    className="form-control"
+                    type="number"
+                    value={newGearShift}
+                    onChange={(e) => setNewGearShift(parseInt(e.target.value, 10) || 0)}
+                    style={{ width: '60px' }}
+                  />
+                  <label style={{ fontSize: '0.85rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <input
+                      type="checkbox"
+                      checked={newGearNegates}
+                      onChange={(e) => setNewGearNegates(e.target.checked)}
+                    />
+                    Negates gear
+                  </label>
+                  <button
+                    className="btn btn-sm btn-primary"
+                    disabled={!newGearName.trim()}
+                    onClick={async () => {
+                      const created = await api.createColdGear({ name: newGearName.trim(), temp_shift: newGearShift, negates_gear: newGearNegates });
+                      setNewGearName('');
+                      setNewGearShift(0);
+                      setNewGearNegates(false);
+                      const items = await api.getColdGear();
+                      setColdGearItems(items);
+                      setClothingMod(String(created.id));
+                      setShowAddGear(false);
+                    }}
+                  >
+                    Add
+                  </button>
+                </div>
+                <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap' }}>
+                  {coldGearItems.map((item) => (
+                    <span key={item.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: 'var(--bg-secondary, #2a2a2a)', padding: '0.15rem 0.5rem', borderRadius: '4px', fontSize: '0.85rem' }}>
+                      {item.name} ({item.temp_shift >= 0 ? '+' : ''}{item.temp_shift}{item.negates_gear ? ', negates gear' : ''})
+                      <button
+                        style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0 0.15rem', fontSize: '1rem', lineHeight: 1 }}
+                        title={`Delete ${item.name}`}
+                        onClick={async () => {
+                          await api.deleteColdGear(item.id);
+                          if (clothingMod === String(item.id)) setClothingMod('');
+                          await loadColdGear();
+                        }}
+                      >
+                        &times;
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
             {weatherResult ? (() => {
               const zone = CLIMATE_ZONES[climateZone];
               // Actual temps (climate zone only) for display
@@ -674,8 +771,9 @@ export default function TravelPanel() {
               const actualDayInfo = TEMP_INFO[actualDay];
               const actualNightInfo = TEMP_INFO[actualNight];
               // Effective temps (climate + clothing/wet) for hypothermia only
-              const isWet = clothingMod === 'wet';
-              const clothShift = isWet ? 1 : -(parseInt(clothingMod, 10));
+              const selectedGear = coldGearItems.find(g => String(g.id) === clothingMod);
+              const isWet = selectedGear?.negates_gear === 1;
+              const clothShift = -(selectedGear?.temp_shift || 0);
               const effDay = adjustTemp(actualDay, clothShift);
               const effNight = adjustTemp(actualNight, clothShift);
               const effDayInfo = TEMP_INFO[effDay];
@@ -719,7 +817,7 @@ export default function TravelPanel() {
                       <div className="weather-fx-line hypo">
                         <span className="weather-fx-tag hypo">Hypothermia</span>
                         {' '}Effective temp: {effDay === effNight ? effDay : `${effDay} (day) / ${effNight} (night)`}
-                        {isWet ? ' \u2014 wet, cold gear negated' : clothShift < 0 ? ` \u2014 ${clothingMod === '1' ? 'light' : 'heavy'} cold gear` : ''}.
+                        {isWet ? ` \u2014 ${selectedGear?.name || 'wet'}, cold gear negated` : clothShift !== 0 ? ` \u2014 ${selectedGear?.name || 'cold gear'}` : ''}.
                         {' '}Save vs. paralysis {dayHasHypo && nightHasHypo && effDay !== effNight
                           ? `${effDayInfo.hypoFreq} (day) / ${effNightInfo.hypoFreq} (night)`
                           : worstInfo?.hypoFreq
@@ -746,7 +844,6 @@ export default function TravelPanel() {
           <div className="card">
             <div className="card-header">
               <h3>Session Log</h3>
-              <button className="btn btn-sm btn-secondary" onClick={() => { loadLogs(); loadNotes(); }}>Refresh</button>
             </div>
             {isViewingActive && (
               <div className="note-input-row">
