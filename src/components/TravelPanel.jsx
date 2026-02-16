@@ -534,6 +534,21 @@ export default function TravelPanel() {
                 <div className="stat-item">
                   <div className="stat-value">{state.hours_traveled_today?.toFixed(1)}h</div>
                   <div className="stat-label">Hours Traveled</div>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    style={{ marginTop: '0.35rem', fontSize: '0.75rem' }}
+                    onClick={async () => {
+                      await api.setTravelState({
+                        hours_traveled_today: 0,
+                        hexes_traveled_today: 0,
+                        log_message: 'Reset travel counters.',
+                      });
+                      await loadState();
+                      await loadLogs();
+                    }}
+                  >
+                    Reset
+                  </button>
                 </div>
                 <div className="stat-item">
                   <select

@@ -1,4 +1,4 @@
-.PHONY: dev server client test build clean clean-dev clean-prod reset reset-dev reset-prod install prod standalone-win standalone-mac standalone-linux
+.PHONY: dev server client test build clean clean-dev clean-prod reset reset-dev reset-prod install prod standalone-win standalone-mac standalone-linux kill
 
 make help:
 	@echo "Usage: make <target>"
@@ -19,6 +19,15 @@ make help:
 	@echo "  standalone-win - Build standalone Windows binary"
 	@echo "  standalone-mac - Build standalone macOS binary"
 	@echo "  standalone-linux - Build standalone Linux binary"
+	@echo "  kill    - Kill all running dev/prod servers"
+
+# Kill all running servers and free ports
+kill:
+	@-lsof -ti:5180 2>/dev/null | xargs kill -9 2>/dev/null
+	@-lsof -ti:5175 2>/dev/null | xargs kill -9 2>/dev/null
+	@-lsof -ti:3000 2>/dev/null | xargs kill -9 2>/dev/null
+	@rm -rf dist/
+	@echo "All servers stopped, dist/ cleared."
 
 # Start both server and client (dev DB)
 dev:

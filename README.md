@@ -65,7 +65,7 @@ make client     # Client only
 make test       # Run tests
 ```
 
-The dev server runs at `http://localhost:5174` (Vite proxy → Express on port 5175).
+The dev server runs at `http://localhost:5180` (Vite proxy → Express on port 5175).
 
 ### Project Structure
 

@@ -36,9 +36,14 @@ app.use('/api/cold-gear', coldGearRouter);
 
 // Serve built frontend in production
 const distPath = path.join(__dirname, '..', 'dist');
+const indexPath = path.join(distPath, 'index.html');
 app.use(express.static(distPath));
 app.get('*', (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(indexPath, (err) => {
+      if (err) res.status(404).end();
+    });
+  }
 });
 
 app.listen(PORT, () => {

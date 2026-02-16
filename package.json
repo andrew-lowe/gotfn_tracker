@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
+    "dev": "concurrently --kill-others \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "vite",
     "dev:server": "NODE_ENV=development PORT=5175 node --watch server/index.js",
     "test": "node --test server/tests/*.test.js",
