@@ -2,6 +2,8 @@
 
 A campaign management tool for the **Gods of the Forbidden North** tabletop RPG setting. Track hex-crawl travel, encounters, weather, sessions, and calendar time — all in one place.
 
+![Forbidden North Tracker](screenshot.png)
+
 ## Features
 
 - **Hex Travel** — Track party movement across terrain hexes with speed modifiers and getting-lost checks
