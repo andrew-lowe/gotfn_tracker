@@ -19,16 +19,21 @@ Download the standalone binary for your platform from the [Releases](../../relea
 
 | Platform | File |
 |----------|------|
-| Windows  | `forbidden-north-tracker-win.exe` |
-| macOS    | `forbidden-north-tracker-mac` |
+| Windows  | `forbidden-north-tracker-*-win.exe` |
+| macOS    | `Forbidden-North-Tracker-*-mac.zip` |
 
 ### Running
 
-1. Download the binary for your OS
+1. Download the file for your OS
 2. **Windows**: Double-click the `.exe` file
-3. **macOS**: Open a terminal, `chmod +x` the file if needed, then run it
+3. **macOS**: Unzip the `.zip` file, then double-click **Forbidden North Tracker.app**. On first launch, macOS will block it — right-click the app and choose **Open**, then click **Open** in the dialog.
 4. Your browser will open automatically to `http://localhost:3000`
-5. Press `Ctrl+C` in the terminal to stop the server
+5. To stop the server, close the terminal window or press `Ctrl+C`
+
+### Troubleshooting
+
+- **"Address already in use" error**: A previous instance is still running. On Windows, open Command Prompt and run `netstat -ano | findstr :3000` to find the PID, then `taskkill /F /PID <pid>`. On macOS, run `lsof -ti:3000 | xargs kill -9`.
+- **Seeing old data after an update**: Delete the `forbidden_north.db` file next to the executable to start fresh. This will erase all campaign data — back it up first if needed.
 
 ### Where is my data?
 
@@ -60,7 +65,7 @@ make client     # Client only
 make test       # Run tests
 ```
 
-The dev server runs at `http://localhost:5173` (Vite proxy → Express on port 3000).
+The dev server runs at `http://localhost:5174` (Vite proxy → Express on port 5175).
 
 ### Project Structure
 
