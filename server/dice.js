@@ -64,3 +64,33 @@ export function rollChance(chanceStr) {
     expression: chanceStr,
   };
 }
+
+/**
+ * Roll a d6 surprise check. Surprised on a 1 only.
+ * Returns { surprised: boolean, roll: number }
+ */
+export function rollSurprise() {
+  const roll = Math.floor(Math.random() * 6) + 1;
+  return { surprised: roll === 1, roll };
+}
+
+/**
+ * Roll a 2d6 reaction roll.
+ * Returns { total: number, rolls: number[], description: string }
+ */
+export function rollReaction() {
+  const rolls = [
+    Math.floor(Math.random() * 6) + 1,
+    Math.floor(Math.random() * 6) + 1,
+  ];
+  const total = rolls[0] + rolls[1];
+
+  let description;
+  if (total <= 2) description = 'Immediate attack';
+  else if (total <= 5) description = 'Hostile, possible attack';
+  else if (total <= 8) description = 'Uncertain, confused';
+  else if (total <= 11) description = 'No attack, may negotiate';
+  else description = 'Enthusiastic, friendly';
+
+  return { total, rolls, description };
+}

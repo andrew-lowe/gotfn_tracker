@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import db, { getActiveSessionId } from '../db.js';
-import { rollDice, rollChance } from '../dice.js';
+import { rollDice, rollChance, rollSurprise, rollReaction } from '../dice.js';
 import {
   calculateTravelSpeed, advanceTime, isForcedMarch,
   parseDirectionChance, isLost, MAX_TRAVEL_HOURS,
@@ -171,14 +171,27 @@ router.post('/wander-check', (req, res) => {
   if (check?.success) {
     encounterResult = rollOnEncounterTable(terrain.id);
     const distResult = rollDice(terrain.encounter_distance);
+    const closeDistResult = rollDice('1d4 × 10');
+    const partySurprise = rollSurprise();
+    const monsterSurprise = rollSurprise();
+    const reaction = rollReaction();
 
     if (encounterResult?.entry) {
+      const surprisedLabel = (s) => s.surprised ? 'SURPRISED' : 'not surprised';
       addLog(state.current_year, state.current_month, state.current_day_of_month, state.current_hour, 'encounter',
         `Wandering monster! ${encounterResult.entry.description}` +
         (encounterResult.numberAppearing ? ` (${encounterResult.numberAppearing.total} appearing)` : '') +
-        (distResult ? ` at ${distResult.total} yards` : '')
+        (distResult ? ` at ${distResult.total} yards` : '') +
+        `. Surprise: Party ${surprisedLabel(partySurprise)} (rolled ${partySurprise.roll}), Monster ${surprisedLabel(monsterSurprise)} (rolled ${monsterSurprise.roll}).` +
+        ` Reaction: ${reaction.description} (rolled ${reaction.total}).`
       );
       encounterResult.distance = distResult;
+      encounterResult.closeDistance = closeDistResult;
+      encounterResult.surprise = {
+        party: partySurprise,
+        monster: monsterSurprise,
+      };
+      encounterResult.reaction = reaction;
     }
   } else {
     addLog(state.current_year, state.current_month, state.current_day_of_month, state.current_hour, 'travel', `Manual wandering monster check: safe (rolled ${check?.roll}).`);

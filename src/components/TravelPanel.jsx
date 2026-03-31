@@ -961,6 +961,19 @@ function ResultPanel({ result }) {
 
   if (type === 'wander-check') {
     const hasEncounter = data.check?.success;
+    const surprise = data.encounterResult?.surprise;
+    const reaction = data.encounterResult?.reaction;
+    const partySurprised = surprise?.party?.surprised;
+    const monsterSurprised = surprise?.monster?.surprised;
+
+    const reactionColor = reaction
+      ? reaction.total <= 2 ? '#dc3545'
+      : reaction.total <= 5 ? '#e67e22'
+      : reaction.total <= 8 ? '#b8860b'
+      : reaction.total <= 11 ? '#2980b9'
+      : '#28a745'
+      : undefined;
+
     return (
       <div className={`result-panel ${hasEncounter ? 'danger' : 'success'}`}>
         <h4>Wandering Monster Check</h4>
@@ -970,11 +983,32 @@ function ResultPanel({ result }) {
         </p>
         {hasEncounter && data.encounterResult?.entry && (
           <div className="mt-1">
+            {surprise && (
+              <p style={{ fontSize: '0.95rem' }}>
+                <strong>Surprise:</strong>{' '}
+                Party: rolled {surprise.party.roll} — {partySurprised ? <span className="text-danger">Surprised!</span> : 'Not surprised'}.{' '}
+                Monster: rolled {surprise.monster.roll} — {monsterSurprised ? <span className="text-danger">Surprised!</span> : 'Not surprised'}.
+              </p>
+            )}
             <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>
               {data.encounterResult.entry.description}
               {data.encounterResult.numberAppearing && ` (${data.encounterResult.numberAppearing.total} appearing)`}
             </p>
-            {data.encounterResult.distance && <p>Distance: {data.encounterResult.distance.total} yards</p>}
+            {partySurprised && !monsterSurprised ? (
+              data.encounterResult.closeDistance && <p>Distance: {data.encounterResult.closeDistance.total} yards <em>(monster closed in!)</em></p>
+            ) : monsterSurprised && !partySurprised ? (
+              <p>
+                Distance: {data.encounterResult.distance?.total} yards standard, or {data.encounterResult.closeDistance?.total} yards close{' '}
+                <em>(monster surprised — party chooses)</em>
+              </p>
+            ) : (
+              data.encounterResult.distance && <p>Distance: {data.encounterResult.distance.total} yards</p>
+            )}
+            {reaction && (
+              <p style={{ color: reactionColor, fontWeight: 600 }}>
+                Reaction: {reaction.total} — {reaction.description}
+              </p>
+            )}
           </div>
         )}
       </div>
