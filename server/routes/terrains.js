@@ -12,9 +12,15 @@ const TERRAIN_FIELDS = [
   'evasion_modifier', 'special_rules', 'color',
 ];
 
-// GET /api/terrains — List all terrain types
+// GET /api/terrains — List all terrain types (optionally filter by mode)
 router.get('/', (req, res) => {
-  const terrains = db.prepare('SELECT * FROM terrain_types ORDER BY name').all();
+  const { mode } = req.query;
+  let terrains;
+  if (mode) {
+    terrains = db.prepare("SELECT * FROM terrain_types WHERE mode = ? AND hex_type != '_sentinel' ORDER BY name").all(mode);
+  } else {
+    terrains = db.prepare("SELECT * FROM terrain_types WHERE hex_type != '_sentinel' OR hex_type IS NULL ORDER BY name").all();
+  }
   res.json(terrains);
 });
 

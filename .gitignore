@@ -9,5 +9,6 @@ release/
 *.db-shm
 *.db-wal
 
-# Source reference PDFs (copyrighted, not for distribution)
+# Source reference material (copyrighted, not for distribution)
 *.pdf
+reference/

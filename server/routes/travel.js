@@ -7,6 +7,7 @@ import {
 } from '../travel-logic.js';
 import { formatHadeanDate, getSeason, advanceDate } from '../calendar.js';
 import { rollWeather } from '../weather.js';
+import { rollWindSound } from '../windSound.js';
 
 const router = Router();
 
@@ -35,7 +36,10 @@ function updateState(fields) {
 
 function addLog(year, month, day, hour, category, message) {
   const sessionId = getActiveSessionId();
-  db.prepare('INSERT INTO session_log (log_year, log_month, log_day, hour, category, message, session_id) VALUES (?, ?, ?, ?, ?, ?, ?)').run(year, month, day, hour, category, message, sessionId);
+  const currentMode = db.prepare('SELECT mode FROM campaign_state WHERE id = 1').get()?.mode || 'surface';
+  db.prepare(
+    'INSERT INTO session_log (log_year, log_month, log_day, hour, category, message, session_id, mode) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(year, month, day, hour, category, message, sessionId, currentMode);
 }
 
 function rollOnEncounterTable(terrainId) {
@@ -55,11 +59,33 @@ function rollOnEncounterTable(terrainId) {
     numberAppearing = rollDice(entry.number_appearing);
   }
 
+  // Underworld: if the result directs to the subterranean hazard table, roll it too.
+  let hazard = null;
+  if (entry?.description && /hazard table/i.test(entry.description)) {
+    const hazardTable = db.prepare(
+      "SELECT * FROM encounter_tables WHERE mode = 'underworld' AND name = 'Subterranean Hazards'"
+    ).get();
+    if (hazardTable) {
+      const hDice = rollDice(hazardTable.dice_expression);
+      if (hDice) {
+        const hEntry = db.prepare(
+          'SELECT * FROM encounter_table_entries WHERE table_id = ? AND roll_min <= ? AND roll_max >= ?'
+        ).get(hazardTable.id, hDice.total, hDice.total);
+        hazard = {
+          table: { id: hazardTable.id, name: hazardTable.name, dice_expression: hazardTable.dice_expression },
+          diceResult: hDice,
+          entry: hEntry || { description: 'No hazard (roll not on table)' },
+        };
+      }
+    }
+  }
+
   return {
     table: { id: table.id, name: table.name, dice_expression: table.dice_expression },
     diceResult,
     entry: entry || { description: 'No encounter (roll not on table)' },
     numberAppearing,
+    hazard,
   };
 }
 
@@ -165,7 +191,10 @@ router.post('/wander-check', (req, res) => {
   const terrain = db.prepare('SELECT * FROM terrain_types WHERE id = ?').get(terrainId);
   if (!terrain) return res.status(404).json({ error: 'Current terrain not found' });
 
-  const check = rollChance(terrain.wandering_monster_chance);
+  // Underworld: using artificial light bumps wander checks by +2 to the d6 target.
+  const usingLight = state.mode === 'underworld' && state.using_light === 1;
+  const lightBonus = usingLight ? 2 : 0;
+  const check = rollChance(terrain.wandering_monster_chance, lightBonus);
   let encounterResult = null;
 
   if (check?.success) {
@@ -360,6 +389,19 @@ router.post('/set-state', (req, res) => {
     addLog(newState.current_year, newState.current_month, newState.current_day_of_month, newState.current_hour, 'time', req.body.log_message);
   }
   res.json({ state: newState });
+});
+
+// POST /api/travel/roll-wind-sound — Roll underworld wind & sound (1d6)
+router.post('/roll-wind-sound', (req, res) => {
+  saveSnapshot();
+  const state = getState();
+  const result = rollWindSound();
+
+  addLog(state.current_year, state.current_month, state.current_day_of_month, state.current_hour, 'weather',
+    `Wind & sound: ${result.name} (${result.wind_mph} mph, sound ${result.sound_feet}'). ${result.effects} (rolled ${result.roll}/d6).`
+  );
+
+  res.json({ windSound: result, state: getState() });
 });
 
 // POST /api/travel/roll-weather — Roll weather for current season

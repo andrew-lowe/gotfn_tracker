@@ -163,6 +163,7 @@ export function initializeDatabase() {
   migrateCampaignStateColumns();
   migrateSessionColumns();
   migrateCalendarColumns();
+  migrateModeColumns();
 
   // Ensure campaign_state row exists
   const state = db.prepare('SELECT id FROM campaign_state WHERE id = 1').get();
@@ -197,6 +198,27 @@ function migrateSessionColumns() {
 function migrateCalendarColumns() {
   try {
     db.exec('ALTER TABLE calendar_months ADD COLUMN days INTEGER NOT NULL DEFAULT 30');
+  } catch {
+    // Column already exists
+  }
+}
+
+function migrateModeColumns() {
+  const modeTables = ['terrain_types', 'encounter_tables', 'campaign_state', 'session_log'];
+  for (const tbl of modeTables) {
+    try {
+      db.exec(`ALTER TABLE ${tbl} ADD COLUMN mode TEXT NOT NULL DEFAULT 'surface'`);
+    } catch {
+      // Column already exists
+    }
+  }
+  try {
+    db.exec('ALTER TABLE campaign_state ADD COLUMN depth_feet INTEGER NOT NULL DEFAULT 0');
+  } catch {
+    // Column already exists
+  }
+  try {
+    db.exec('ALTER TABLE campaign_state ADD COLUMN using_light INTEGER NOT NULL DEFAULT 0');
   } catch {
     // Column already exists
   }

@@ -1,0 +1,502 @@
+import db from '../db.js';
+
+// Underworld terrains — 8 subterranean types from Malgorgia.
+// Short descriptions only; detailed prose stays in user's private reference.
+const terrains = [
+  {
+    name: 'Yawning Vault',
+    hex_type: 'cave',
+    description: 'Massive biome cavern. Ceiling usually invisible at 1d4 × 100\'. Glowing lichen, mulworp herds.',
+    travel_speed_modifier: -0.33,
+    visibility: '0\' (tenebrous) or 1d4 × 1,000\' (ambient)',
+    visibility_miles: 0.2,
+    losing_direction_frequency: '1/day',
+    losing_direction_chance: '2:6',
+    foraging_chance: '3:6',
+    foraging_yield: '1d6',
+    hunting_chance: '3:6',
+    hunting_yield: '2d6',
+    hunting_notes: '2:6 chance mulworp belongs to angry shepherd.',
+    wandering_monster_frequency: '1/day',
+    wandering_monster_chance: '1:6',
+    wandering_monster_chance_lit: '3:6',
+    encounter_distance: '4d6 × 10',
+    evasion_modifier: '+15% for jagged stalagmites',
+    special_rules: 'Easy to get lost in, but wide-open — fewer wandering encounters unless carrying artificial light (bumps chance to 3:6).',
+    color: '#5a4a6b',
+  },
+  {
+    name: 'Hypogean Lane',
+    hex_type: 'wide_tunnel',
+    description: 'Underground highway, 1d6 × 100\' wide × 1d6 × 20\' high. Connects vaults and landmarks.',
+    travel_speed_modifier: -0.33,
+    visibility: '0\' (tenebrous) or 1d4 × 100\' (ambient)',
+    visibility_miles: 0.02,
+    losing_direction_frequency: '1/day',
+    losing_direction_chance: '2:6',
+    foraging_chance: '3:6',
+    foraging_yield: '1d6',
+    hunting_chance: '2:6',
+    hunting_yield: '2d6',
+    hunting_notes: '2:6 chance mulworp belongs to angry shepherd.',
+    wandering_monster_frequency: '1/day',
+    wandering_monster_chance: '2:6',
+    wandering_monster_chance_lit: '4:6',
+    encounter_distance: '4d6 × 10',
+    evasion_modifier: '+15% for jagged stalagmites',
+    special_rules: 'Predators lurk in ceiling stalactites and along lake/river shores.',
+    color: '#4a4458',
+  },
+  {
+    name: 'Branchwork Tunnel',
+    hex_type: 'narrow_tunnel',
+    description: 'Narrowest passages, 2d6 × 5\' wide/high. Treacherous footing, sumps.',
+    travel_speed_modifier: -0.50,
+    visibility: '0\' (tenebrous) or line of sight (ambient)',
+    visibility_miles: 0.01,
+    losing_direction_frequency: '1/day',
+    losing_direction_chance: '3:6',
+    foraging_chance: '3:6',
+    foraging_yield: '1d6',
+    hunting_chance: '1:6',
+    hunting_yield: '2d6',
+    hunting_notes: '2:6 chance mulworp belongs to angry shepherd.',
+    wandering_monster_frequency: '1/day',
+    wandering_monster_chance: '3:6',
+    wandering_monster_chance_lit: '5:6',
+    encounter_distance: '1d6 × 10',
+    evasion_modifier: '+25% for jagged stalagmites and stone corners',
+    special_rules: 'Map lines actually represent many interwoven strands. Sumps may force submerged swims or days of backtracking.',
+    color: '#3a3040',
+  },
+  {
+    name: 'Fungal Forest',
+    hex_type: 'mushroom',
+    description: 'Phosphorescent fungal gardens inside yawning vaults. Towering gilled fungi and drifting spores.',
+    travel_speed_modifier: -0.50,
+    visibility: '0\' (tenebrous) or 1d4 × 100\' (ambient)',
+    visibility_miles: 0.02,
+    losing_direction_frequency: '1/day',
+    losing_direction_chance: '3:6',
+    foraging_chance: '3:6',
+    foraging_yield: '1d6',
+    hunting_chance: '3:6',
+    hunting_yield: '2d6',
+    hunting_notes: '2:6 chance mulworp belongs to angry shepherd.',
+    wandering_monster_frequency: '1/day',
+    wandering_monster_chance: '1:6',
+    wandering_monster_chance_lit: '1:6',
+    encounter_distance: '2d6 × 10',
+    evasion_modifier: '+25% for thick fungal groves',
+    special_rules: 'Density conceals branchwork tunnel exits along the perimeter; parties may need to search to escape the hex.',
+    color: '#6b4a8a',
+  },
+  {
+    name: 'Undersea Chamber',
+    hex_type: 'undersea',
+    description: 'Sealed freshwater-over-saltwater cavern. 5\' to 1,000\'+ deep.',
+    travel_speed_modifier: 0,
+    travel_speed_notes: 'Per water vessel.',
+    visibility: '0\' (tenebrous) or 1d4 × 1,000\' (ambient)',
+    visibility_miles: 0.2,
+    losing_direction_frequency: '1/day',
+    losing_direction_chance: '2:6',
+    foraging_chance: '3:6',
+    foraging_yield: '1d6',
+    foraging_notes: 'Shore only.',
+    fishing_chance: '2:6',
+    fishing_yield: '4d6',
+    wandering_monster_frequency: '1/day',
+    wandering_monster_chance: '1:6',
+    wandering_monster_chance_lit: '3:6',
+    encounter_distance: '2d6 × 10',
+    evasion_modifier: null,
+    special_rules: 'Three depth zones: freshwater illuminated (0–150\'), mixed twilight (150–650\'), saltwater midnight (650\'+). Northern undersea plunges via Fathom Falls to 6,500\'.',
+    color: '#2a4a6b',
+  },
+  {
+    name: 'Blackrock Tube',
+    hex_type: 'charcoal_tunnel',
+    description: 'Obsidian lava tubes. Often flanked by flow ledges / lava benches.',
+    travel_speed_modifier: -0.33,
+    visibility: 'Line of sight (ambient)',
+    visibility_miles: 0.01,
+    losing_direction_frequency: '1/day',
+    losing_direction_chance: '3:6',
+    foraging_chance: null,
+    hunting_chance: '1:6',
+    hunting_yield: '2d6',
+    wandering_monster_frequency: '1/day',
+    wandering_monster_chance: '1:6',
+    wandering_monster_chance_lit: '1:6',
+    encounter_distance: '4d6 × 10',
+    evasion_modifier: '+10% for winding passages',
+    special_rules: 'Temperature is one level higher than the party\'s current travel depth. No flora/lichen.',
+    temperature_offset_levels: 1,
+    color: '#1a1a1a',
+  },
+  {
+    name: 'Magma Lake',
+    hex_type: 'magma',
+    description: 'Molten infernal chamber. Crossed via blackrock-bridge latticework or flight.',
+    travel_speed_modifier: 0,
+    travel_speed_notes: 'Per magical or natural flying; blackrock bridges allow crossing without flight.',
+    visibility: '1d4 × 1,000\' (ambient)',
+    visibility_miles: 0.2,
+    losing_direction_frequency: '1/day',
+    losing_direction_chance: '1:6',
+    foraging_chance: null,
+    hunting_chance: null,
+    wandering_monster_frequency: '1/day',
+    wandering_monster_chance: '1:12',
+    encounter_distance: '4d6 × 10',
+    evasion_modifier: null,
+    special_rules: 'Temperature is one level higher than the party\'s current travel depth. Falling into magma is fatal.',
+    temperature_offset_levels: 1,
+    color: '#8a2a1a',
+  },
+  {
+    name: 'Hiemal Byways',
+    hex_type: 'icy_tunnel',
+    description: "Baalor's ice-cursed tunnels around his fortress. Pale-blue glow, cracking echoes.",
+    travel_speed_modifier: -0.50,
+    visibility: 'Line of sight (ambient)',
+    visibility_miles: 0.01,
+    losing_direction_frequency: '1/day',
+    losing_direction_chance: '3:6',
+    foraging_chance: null,
+    hunting_chance: '1:6',
+    hunting_yield: '2d6',
+    wandering_monster_frequency: '1/day',
+    wandering_monster_chance: '1:6',
+    wandering_monster_chance_lit: '1:6',
+    encounter_distance: '4d6 × 10',
+    evasion_modifier: '+15% for icy stalagmites and winding passages',
+    special_rules: 'Extreme cold — hypothermia applies instead of hyperthermia. All water sources frozen; thin ice may be breakable.',
+    temperature_override: 'extreme_cold',
+    color: '#8ab0d0',
+  },
+];
+
+// Encounter tables per terrain (name must match terrain.name for lookup).
+const encounterTables = {
+  'Yawning Vault': {
+    dice_expression: '1d100',
+    entries: [
+      { roll_min: 1,  roll_max: 10, description: 'Roll on subterranean hazard table; then roll again here, combining results.' },
+      { roll_min: 11, roll_max: 15, description: '6d10 mulworps (A), 1d4 shepherds (2d6 type)' },
+      { roll_min: 16, roll_max: 20, description: '5d8 humanoids (2d6 type)' },
+      { roll_min: 21, roll_max: 25, description: '3d12 stirges' },
+      { roll_min: 26, roll_max: 30, description: '1d12 occulears (A)' },
+      { roll_min: 31, roll_max: 35, description: '1d10 vault hunters (A)' },
+      { roll_min: 36, roll_max: 40, description: '3d6 giant bombardier beetles (A), 2d6 giant fire beetles' },
+      { roll_min: 41, roll_max: 45, description: '2d4 giant fuzzy arctic ant warriors (A), 5d4 workers (A)' },
+      { roll_min: 46, roll_max: 50, description: 'Swarm of grotto lice (A)' },
+      { roll_min: 51, roll_max: 55, description: '2d10 cave locusts' },
+      { roll_min: 56, roll_max: 60, description: '1d6 subterranean lizards' },
+      { roll_min: 61, roll_max: 65, description: '4d6 white mold zombies (A)' },
+      { roll_min: 66, roll_max: 70, description: '3d8 giant cockroaches (A)' },
+      { roll_min: 71, roll_max: 73, description: '1d6 will-o-the-wisps' },
+      { roll_min: 74, roll_max: 76, description: '1d2 ravusarks (A)' },
+      { roll_min: 77, roll_max: 79, description: '5d8 under-men (A)' },
+      { roll_min: 80, roll_max: 82, description: '1d3 carcass crawlers' },
+      { roll_min: 83, roll_max: 85, description: "1d4 Trow skeletons or zombies (A)" },
+      { roll_min: 86, roll_max: 88, description: '1d3 eldritch jellies (A)' },
+      { roll_min: 89, roll_max: 91, description: '1d2 disenchanters' },
+      { roll_min: 92, roll_max: 94, description: 'Ochre jelly' },
+      { roll_min: 95, roll_max: 95, description: '1d2 rust-ropers (A)' },
+      { roll_min: 96, roll_max: 96, description: '1d3 Trow (A)' },
+      { roll_min: 97, roll_max: 97, description: 'Black worm (A)' },
+      { roll_min: 98, roll_max: 98, description: 'Bore dragon (A)' },
+      { roll_min: 99, roll_max: 99, description: '1d4 dyoclopses (A)' },
+      { roll_min: 100, roll_max: 100, description: 'Chaos cavity (C); then roll again here, combining results.' },
+    ],
+  },
+  'Hypogean Lane': {
+    dice_expression: '1d100',
+    entries: [
+      { roll_min: 1,  roll_max: 15, description: 'Roll on subterranean hazard table; then roll again here, combining results.' },
+      { roll_min: 16, roll_max: 20, description: '6d10 mulworps (A), 1d4 shepherds (2d6 type)' },
+      { roll_min: 21, roll_max: 25, description: '5d8 humanoids (2d6 type)' },
+      { roll_min: 26, roll_max: 30, description: '5d8 under-men (A)' },
+      { roll_min: 31, roll_max: 35, description: '1d12 occulears (A)' },
+      { roll_min: 36, roll_max: 40, description: '3d6 hell piercers (A)' },
+      { roll_min: 41, roll_max: 45, description: '2d6 cave crepans (A)' },
+      { roll_min: 46, roll_max: 50, description: '1d6 ankhegs (1d6+2 HD)' },
+      { roll_min: 51, roll_max: 55, description: 'Slithering tracker' },
+      { roll_min: 56, roll_max: 60, description: '1d4 rust monsters' },
+      { roll_min: 61, roll_max: 65, description: '1d6 cave lobsters (giant crabs)' },
+      { roll_min: 66, roll_max: 70, description: '4d6 white mold zombies (A)' },
+      { roll_min: 71, roll_max: 73, description: '1d6 basilisks' },
+      { roll_min: 74, roll_max: 76, description: '1d2 ravusarks (A)' },
+      { roll_min: 77, roll_max: 79, description: '1d3 hulkers' },
+      { roll_min: 80, roll_max: 82, description: '1d4 dyoclopses (A)' },
+      { roll_min: 83, roll_max: 85, description: 'Black pudding' },
+      { roll_min: 86, roll_max: 88, description: '1d4 warp beasts' },
+      { roll_min: 89, roll_max: 91, description: 'Hellish hausera (A) lurking in a river/tarn/stream' },
+      { roll_min: 92, roll_max: 94, description: '2d6 giant trogloraptors (A)' },
+      { roll_min: 95, roll_max: 95, description: '1d3 rust-ropers (A)' },
+      { roll_min: 96, roll_max: 96, description: '1d4+1 Trow (A)' },
+      { roll_min: 97, roll_max: 97, description: '1d2 black worms (A)' },
+      { roll_min: 98, roll_max: 98, description: '1d2 bore dragons (A)' },
+      { roll_min: 99, roll_max: 99, description: 'Umber pudding (A)' },
+      { roll_min: 100, roll_max: 100, description: 'Chaos cavity (C); then roll again here, combining results.' },
+    ],
+  },
+  'Branchwork Tunnel': {
+    dice_expression: '1d100',
+    entries: [
+      { roll_min: 1,  roll_max: 20, description: 'Roll on subterranean hazard table; then roll again here, combining results.' },
+      { roll_min: 21, roll_max: 25, description: '2d4 giant centipedes' },
+      { roll_min: 26, roll_max: 30, description: '2d4 mind lashers' },
+      { roll_min: 31, roll_max: 35, description: '4d10 dark creepers; if 25+ add 1 dark stalker (2+1 HD)' },
+      { roll_min: 36, roll_max: 40, description: '4d4 under-men (A)' },
+      { roll_min: 41, roll_max: 45, description: '2d6 carcass crawlers' },
+      { roll_min: 46, roll_max: 50, description: '2d6 giant trogloraptors (A)' },
+      { roll_min: 51, roll_max: 55, description: '3d6 hell piercers (A), 2d6 giant fire beetles' },
+      { roll_min: 56, roll_max: 60, description: '1d3 ravusarks (A)' },
+      { roll_min: 61, roll_max: 65, description: 'Lurker above' },
+      { roll_min: 66, roll_max: 70, description: '1d2 bulettes' },
+      { roll_min: 71, roll_max: 73, description: '1d3 caeciliae' },
+      { roll_min: 74, roll_max: 76, description: '1d3+1 rust-ropers (A)' },
+      { roll_min: 77, roll_max: 79, description: '1d2 spell vores (A)' },
+      { roll_min: 80, roll_max: 82, description: '1d4 chert elementals (A) (d6: 1–3 lesser, 4–5 intermediate, 6 greater)' },
+      { roll_min: 83, roll_max: 85, description: '1d4 xorn' },
+      { roll_min: 86, roll_max: 88, description: '1d6 abyssal shadows (A)' },
+      { roll_min: 89, roll_max: 91, description: 'Hellish hausera (A) lurking in a stream/river/tarn' },
+      { roll_min: 92, roll_max: 94, description: 'Umber pudding (A)' },
+      { roll_min: 95, roll_max: 95, description: '1d4+1 Trow (A)' },
+      { roll_min: 96, roll_max: 96, description: '1d3 black worms (A)' },
+      { roll_min: 97, roll_max: 97, description: '1d2 bore dragons (A)' },
+      { roll_min: 98, roll_max: 98, description: 'Giant spoilt antrobia (A)' },
+      { roll_min: 99, roll_max: 99, description: 'Tuunrangayak the Tunneling Terror (area B04)' },
+      { roll_min: 100, roll_max: 100, description: 'Chaos cavity (C); then roll again here, combining results.' },
+    ],
+  },
+  'Fungal Forest': {
+    dice_expression: '1d100',
+    entries: [
+      { roll_min: 1,  roll_max: 10, description: 'Roll on subterranean hazard table; then roll again here, combining results.' },
+      { roll_min: 11, roll_max: 15, description: '2d10 × 10 mycelians' },
+      { roll_min: 16, roll_max: 20, description: '1d4 × 10 fungal pixies, 1d2 dryads' },
+      { roll_min: 21, roll_max: 25, description: '2d6 sweet peach shriekers (A)' },
+      { roll_min: 26, roll_max: 30, description: '1d4 violet fungi' },
+      { roll_min: 31, roll_max: 35, description: '1d4 gas spores' },
+      { roll_min: 36, roll_max: 40, description: '3d4 rainbow mosses (strangle weeds)' },
+      { roll_min: 41, roll_max: 45, description: '2d6 cave crepans (A)' },
+      { roll_min: 46, roll_max: 50, description: '3d4 giant bombardier beetles (A)' },
+      { roll_min: 51, roll_max: 55, description: '1d10 fungal jellies (giant jellyfish MV 30\' [10\'] fly)' },
+      { roll_min: 56, roll_max: 60, description: '3d6 boreal miner bees (A)' },
+      { roll_min: 61, roll_max: 65, description: '1d4 crab spiders' },
+      { roll_min: 66, roll_max: 70, description: '3d6 occulears (A)' },
+      { roll_min: 71, roll_max: 73, description: 'Giant mantis' },
+      { roll_min: 74, roll_max: 76, description: '1d8 trolls' },
+      { roll_min: 77, roll_max: 79, description: '1d4 warp beasts' },
+      { roll_min: 80, roll_max: 82, description: '1d6 will-o-the-wisps' },
+      { roll_min: 83, roll_max: 85, description: '1d3 amphisbaenas' },
+      { roll_min: 86, roll_max: 88, description: '1d4 carcass crawlers' },
+      { roll_min: 89, roll_max: 91, description: 'Flail snail' },
+      { roll_min: 92, roll_max: 94, description: '1d3 eldritch jellies (A)' },
+      { roll_min: 95, roll_max: 95, description: 'Purple worm' },
+      { roll_min: 96, roll_max: 96, description: '1d3 shambling mounds (of fungi)' },
+      { roll_min: 97, roll_max: 97, description: 'Trapper' },
+      { roll_min: 98, roll_max: 98, description: '1d4 chaos apes (A)' },
+      { roll_min: 99, roll_max: 99, description: '1d8 fungagantes (A), 4d6 fungal zombies (un-turnable)' },
+      { roll_min: 100, roll_max: 100, description: 'Chaos cavity (C); then roll again here, combining results.' },
+    ],
+  },
+  'Undersea Chamber': {
+    dice_expression: '1d100',
+    entries: [
+      { roll_min: 1,  roll_max: 10, description: 'Roll on subterranean hazard table; then roll again here, combining results.' },
+      { roll_min: 11, roll_max: 20, description: '2d4 giant piranhas' },
+      { roll_min: 21, roll_max: 30, description: '1d2 giant catfish' },
+      { roll_min: 31, roll_max: 40, description: '1d4 giant pikes' },
+      { roll_min: 41, roll_max: 50, description: '2d4 freshwater giant rockfish' },
+      { roll_min: 51, roll_max: 60, description: '1d3 giant electric eels' },
+      { roll_min: 61, roll_max: 70, description: '1d3 freshwater termites' },
+      { roll_min: 71, roll_max: 76, description: '2d10 aquatic spiders' },
+      { roll_min: 77, roll_max: 82, description: '1d10 giant jellyfish' },
+      { roll_min: 83, roll_max: 88, description: '1d4 gas spores' },
+      { roll_min: 89, roll_max: 94, description: '1d3 water fiends' },
+      { roll_min: 95, roll_max: 95, description: 'Tarn hydra (sea hydra)' },
+      { roll_min: 96, roll_max: 96, description: 'Albino water beast (sea serpent)' },
+      { roll_min: 97, roll_max: 97, description: 'Giant sturgeon' },
+      { roll_min: 98, roll_max: 98, description: '1d2 albino giant crocodiles, 1d4 large crocodiles, 2d6 cave crocodiles' },
+      { roll_min: 99, roll_max: 99, description: 'Northern: Ulurrugnak the Horrific God of the Lake (hex 05.08). Southern: Maguyuk the Howling Tempest (K16).' },
+      { roll_min: 100, roll_max: 100, description: 'Chaos cavity (C); then roll again here, combining results.' },
+    ],
+  },
+  'Blackrock Tube': {
+    dice_expression: '1d100',
+    entries: [
+      { roll_min: 1,  roll_max: 20, description: 'Roll on subterranean hazard table; then roll again here, combining results.' },
+      { roll_min: 21, roll_max: 25, description: '2d6 fire beetles' },
+      { roll_min: 26, roll_max: 30, description: '3d6 hell piercers (A), 2d6 giant fire beetles' },
+      { roll_min: 31, roll_max: 35, description: '3d10 incinerating skeletons (A)' },
+      { roll_min: 36, roll_max: 40, description: '2d4 flame salamanders' },
+      { roll_min: 41, roll_max: 45, description: '2d4 hellhounds' },
+      { roll_min: 46, roll_max: 50, description: 'Gray ooze' },
+      { roll_min: 51, roll_max: 55, description: '1d12 shadows' },
+      { roll_min: 56, roll_max: 60, description: '2d6 phase spiders' },
+      { roll_min: 61, roll_max: 65, description: '2d6 blackrock mantids' },
+      { roll_min: 66, roll_max: 70, description: '1d4 flame lizards' },
+      { roll_min: 71, roll_max: 73, description: '1d4 blistering hulkers (A)' },
+      { roll_min: 74, roll_max: 76, description: '1d4 fire elementals (d6: 1–3 lesser, 4–5 intermediate, 6 greater)' },
+      { roll_min: 77, roll_max: 79, description: '1d8 inferno trolls (A)' },
+      { roll_min: 80, roll_max: 82, description: '1d4 xorn' },
+      { roll_min: 83, roll_max: 85, description: 'Haleron ooze (A)' },
+      { roll_min: 86, roll_max: 88, description: 'Blackrock chimera (obsidian-skinned, fire-immune)' },
+      { roll_min: 89, roll_max: 91, description: '2d6 blackrock scorpions (giant scorpions, fire-immune)' },
+      { roll_min: 92, roll_max: 94, description: '2d4 Magoth skull acolytes (A), 1d2 Magoth entropy disciples (A) (U30)' },
+      { roll_min: 95, roll_max: 95, description: '1d4 bore dragons (A)' },
+      { roll_min: 96, roll_max: 96, description: 'Efreeti (d6: 1–5 lesser, 6 greater)' },
+      { roll_min: 97, roll_max: 97, description: '1d4+1 Trow skeletons (A)' },
+      { roll_min: 98, roll_max: 98, description: 'Tulphajath (recherché, A), 20 entropy zombies (A) (M15)' },
+      { roll_min: 99, roll_max: 99, description: 'Malfyr' },
+      { roll_min: 100, roll_max: 100, description: 'Chaos cavity (C); then roll again here, combining results.' },
+    ],
+  },
+  'Magma Lake': {
+    dice_expression: '2d10',
+    entries: [
+      { roll_min: 2,  roll_max: 2,  description: 'Chaos cavity (C); then roll again here, combining results.' },
+      { roll_min: 3,  roll_max: 3,  description: 'Roll on subterranean hazard table; then roll again here, combining results.' },
+      { roll_min: 4,  roll_max: 6,  description: 'Volcanic whale (obsidian-skinned sperm whale, fire-immune, flies 180\' [60\'])' },
+      { roll_min: 7,  roll_max: 15, description: '1d6 blackrock chimeras (obsidian-skinned, fire-immune)' },
+      { roll_min: 16, roll_max: 18, description: '2d4 Magoth skull acolytes (A), 1d2 Magoth entropy disciples (A) (U30)' },
+      { roll_min: 19, roll_max: 19, description: '1d4 bore dragons (A)' },
+      { roll_min: 20, roll_max: 20, description: '1d3 efreeti (d6: 1–5 lesser, 6 greater)' },
+    ],
+  },
+  'Hiemal Byways': {
+    dice_expression: '1d100',
+    entries: [
+      { roll_min: 1,  roll_max: 20, description: 'Roll on subterranean hazard table; then roll again here, combining results.' },
+      { roll_min: 21, roll_max: 25, description: 'd6: 1–3 collapsing ice (C) only; 4–6 slippery ice (C), then roll again here' },
+      { roll_min: 26, roll_max: 30, description: '3d6 hell piercers (A), 2d6 isothermal beetles (A)' },
+      { roll_min: 31, roll_max: 35, description: '1d10 frozen dead (A)' },
+      { roll_min: 36, roll_max: 40, description: '2d4 frost salamanders' },
+      { roll_min: 41, roll_max: 45, description: '2d4 Huronian hounds (A)' },
+      { roll_min: 46, roll_max: 50, description: 'Slithering tracker' },
+      { roll_min: 51, roll_max: 55, description: '3d6 frost toads' },
+      { roll_min: 56, roll_max: 60, description: '4d6 giant fuzzy arctic ants (A)' },
+      { roll_min: 61, roll_max: 65, description: '6d10 snow goblins (A)' },
+      { roll_min: 66, roll_max: 70, description: '1d4 frost lizards (fire-immune, breath deals cold)' },
+      { roll_min: 71, roll_max: 73, description: '1d4 niveous hulkers (A)' },
+      { roll_min: 74, roll_max: 76, description: '2d4 draugr icesworn (A)' },
+      { roll_min: 77, roll_max: 79, description: '1d6 laplandic basilisks (A)' },
+      { roll_min: 80, roll_max: 82, description: '1d6 living crystal statues' },
+      { roll_min: 83, roll_max: 85, description: '1d4 frost mold patches (brown mold as hoarfrost)' },
+      { roll_min: 86, roll_max: 88, description: 'd6: 1–3 2d6 arctic ogres (A); 4–5 1d6 yeti; 6 both' },
+      { roll_min: 89, roll_max: 91, description: '1d3 giant arctic wolf spiders (A)' },
+      { roll_min: 92, roll_max: 94, description: '1d6 will-o-the-wisps' },
+      { roll_min: 95, roll_max: 95, description: '1d4+1 Trow (A)' },
+      { roll_min: 96, roll_max: 96, description: 'Rime hag (A)' },
+      { roll_min: 97, roll_max: 97, description: '1d4 remorhazes' },
+      { roll_min: 98, roll_max: 98, description: '1d3 arctic crawlers (A)' },
+      { roll_min: 99, roll_max: 99, description: '1d8 tundra trolls (A)' },
+      { roll_min: 100, roll_max: 100, description: 'Chaos cavity (C); then roll again here, combining results.' },
+    ],
+  },
+};
+
+// Subterranean hazard table (d100) — seeded as a standalone encounter_table
+// with no terrain (terrain_id=NULL, mode='underworld'). Entries reference
+// glossary terms defined in the source book (not included here).
+const hazardTable = {
+  name: 'Subterranean Hazards',
+  dice_expression: '1d100',
+  entries: [
+    { roll_min: 1,  roll_max: 4,  description: 'Blinding vapors (C)' },
+    { roll_min: 5,  roll_max: 8,  description: 'Cave-in (C)' },
+    { roll_min: 9,  roll_max: 12, description: 'Crack of doom (C)' },
+    { roll_min: 13, roll_max: 16, description: 'Defilement zone (C)' },
+    { roll_min: 17, roll_max: 20, description: 'Diabolical infestation (C)' },
+    { roll_min: 21, roll_max: 24, description: 'Flash flood (C)' },
+    { roll_min: 25, roll_max: 28, description: 'Gravity zone (C)' },
+    { roll_min: 29, roll_max: 32, description: 'Greater utter dark zone (C)' },
+    { roll_min: 33, roll_max: 36, description: 'Hallucinogenic spores (C)' },
+    { roll_min: 37, roll_max: 40, description: 'Idol tainted with void lunacy (C)' },
+    { roll_min: 41, roll_max: 44, description: 'Immense bat swarm (C)' },
+    { roll_min: 45, roll_max: 48, description: 'Invisible portal (C)' },
+    { roll_min: 49, roll_max: 52, description: 'Lesser utter dark zone (C)' },
+    { roll_min: 53, roll_max: 56, description: 'Lethal gas (C)' },
+    { roll_min: 57, roll_max: 60, description: 'Noxious fumes (C)' },
+    { roll_min: 61, roll_max: 64, description: 'Poisonous fumes (C)' },
+    { roll_min: 65, roll_max: 68, description: 'Sleep gas (C)' },
+    { roll_min: 69, roll_max: 72, description: 'Spell node (C)' },
+    { roll_min: 73, roll_max: 76, description: 'Sulfurous fumes (C)' },
+    { roll_min: 77, roll_max: 80, description: 'Time zone (C)' },
+    { roll_min: 81, roll_max: 84, description: 'Tremors (C)' },
+    { roll_min: 85, roll_max: 88, description: 'Underground magma eruption (C)' },
+    { roll_min: 89, roll_max: 92, description: 'Vacuum zone (C)' },
+    { roll_min: 93, roll_max: 96, description: 'White mold trap (C)' },
+    { roll_min: 97, roll_max: 100, description: 'Roll twice on this table and combine the results.' },
+  ],
+};
+
+const TERRAIN_FIELDS = [
+  'name', 'hex_type', 'description', 'travel_speed_modifier', 'travel_speed_notes',
+  'visibility', 'visibility_miles', 'losing_direction_frequency', 'losing_direction_chance',
+  'losing_direction_notes', 'foraging_chance', 'foraging_yield', 'foraging_notes',
+  'hunting_chance', 'hunting_yield', 'fishing_chance', 'fishing_yield',
+  'wandering_monster_frequency', 'wandering_monster_chance', 'encounter_distance',
+  'evasion_modifier', 'special_rules', 'color',
+];
+
+export function seedUnderworld() {
+  // Idempotent: run only if no underworld terrains exist yet.
+  const count = db.prepare("SELECT COUNT(*) as count FROM terrain_types WHERE mode = 'underworld'").get();
+  if (count.count > 0) return;
+
+  const placeholders = TERRAIN_FIELDS.map((f) => `@${f}`).join(', ');
+  const columns = TERRAIN_FIELDS.join(', ');
+  const insertTerrain = db.prepare(
+    `INSERT INTO terrain_types (${columns}, mode) VALUES (${placeholders}, 'underworld')`
+  );
+  const insertTable = db.prepare(
+    "INSERT INTO encounter_tables (terrain_id, name, dice_expression, mode) VALUES (?, ?, ?, 'underworld')"
+  );
+  // Seed a sentinel terrain to host the shared hazard table
+  // (encounter_tables.terrain_id is NOT NULL; rather than migrate the schema,
+  // we attach the hazard table to a hidden "_Hazards" terrain).
+  const insertSentinel = db.prepare(
+    `INSERT INTO terrain_types (name, description, hex_type, color, mode) VALUES ('_Subterranean Hazards', 'Internal: host for the shared hazard table. Not selectable for travel.', '_sentinel', '#000000', 'underworld')`
+  );
+  const insertHazardTable = db.prepare(
+    "INSERT INTO encounter_tables (terrain_id, name, dice_expression, mode) VALUES (?, ?, ?, 'underworld')"
+  );
+  const insertEntry = db.prepare(
+    'INSERT INTO encounter_table_entries (table_id, roll_min, roll_max, description, notes) VALUES (?, ?, ?, ?, ?)'
+  );
+
+  const seedAll = db.transaction(() => {
+    for (const terrain of terrains) {
+      const params = {};
+      for (const f of TERRAIN_FIELDS) {
+        params[f] = terrain[f] !== undefined ? terrain[f] : null;
+      }
+      const result = insertTerrain.run(params);
+      const terrainId = result.lastInsertRowid;
+
+      const tbl = encounterTables[terrain.name];
+      if (tbl) {
+        const tblResult = insertTable.run(terrainId, `${terrain.name} Encounters`, tbl.dice_expression);
+        const tableId = tblResult.lastInsertRowid;
+        for (const entry of tbl.entries) {
+          insertEntry.run(tableId, entry.roll_min, entry.roll_max, entry.description, entry.notes || null);
+        }
+      }
+    }
+
+    // Hazard table lives under the sentinel terrain
+    const sentinelResult = insertSentinel.run();
+    const hazardResult = insertHazardTable.run(sentinelResult.lastInsertRowid, hazardTable.name, hazardTable.dice_expression);
+    for (const entry of hazardTable.entries) {
+      insertEntry.run(hazardResult.lastInsertRowid, entry.roll_min, entry.roll_max, entry.description, null);
+    }
+  });
+
+  seedAll();
+}

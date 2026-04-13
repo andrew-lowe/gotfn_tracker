@@ -46,20 +46,24 @@ export function rollDice(expression) {
  * Parse "X:6" chance notation and roll.
  * Returns { success: boolean, roll: number, target: number }
  */
-export function rollChance(chanceStr) {
+export function rollChance(chanceStr, bonus = 0) {
   if (!chanceStr) return null;
 
   const match = chanceStr.match(/^(\d+):(\d+)$/);
   if (!match) return null;
 
-  const target = parseInt(match[1], 10);
+  const baseTarget = parseInt(match[1], 10);
   const sides = parseInt(match[2], 10);
+  // Clamp adjusted target to [0, sides] so bonuses can't exceed the die.
+  const target = Math.max(0, Math.min(sides, baseTarget + (bonus || 0)));
   const roll = Math.floor(Math.random() * sides) + 1;
 
   return {
     success: roll <= target,
     roll,
     target,
+    baseTarget,
+    bonus: bonus || 0,
     sides,
     expression: chanceStr,
   };
