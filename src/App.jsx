@@ -6,6 +6,7 @@ import EncounterTableEditor from './components/EncounterTableEditor';
 import SessionManager from './components/SessionManager';
 import ReferenceCharts from './components/ReferenceCharts';
 import CalendarSettings from './components/CalendarSettings';
+import NoteTracker from './components/NoteTracker';
 
 export default function App() {
   return (
@@ -21,6 +22,9 @@ export default function App() {
           </NavLink>
           <NavLink to="/sessions" className={({ isActive }) => isActive ? 'active' : ''}>
             Sessions
+          </NavLink>
+          <NavLink to="/notes" className={({ isActive }) => isActive ? 'active' : ''}>
+            Notes
           </NavLink>
           <NavLink to="/reference" className={({ isActive }) => isActive ? 'active' : ''}>
             Reference
@@ -38,6 +42,7 @@ export default function App() {
           <Route path="/" element={<TravelPanel />} />
           <Route path="/encounters" element={<EncounterTableEditor />} />
           <Route path="/sessions" element={<SessionManager />} />
+          <Route path="/notes" element={<NoteTracker />} />
           <Route path="/reference" element={<ReferenceCharts />} />
           <Route path="/calendar" element={<CalendarSettings />} />
           <Route path="/terrains" element={<TerrainManager />} />

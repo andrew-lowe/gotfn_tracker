@@ -144,6 +144,18 @@ export function initializeDatabase() {
       season TEXT NOT NULL CHECK (season IN ('winter', 'spring', 'summer', 'fall')),
       days INTEGER NOT NULL DEFAULT 30
     );
+
+    CREATE TABLE IF NOT EXISTS campaign_notes (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      text TEXT NOT NULL,
+      created_year INTEGER NOT NULL,
+      created_month INTEGER NOT NULL,
+      created_day INTEGER NOT NULL,
+      due_year INTEGER,
+      due_month INTEGER,
+      due_day INTEGER,
+      created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    );
   `);
 
   // Migrate existing DBs that may lack new columns

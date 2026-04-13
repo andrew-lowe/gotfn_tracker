@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import TerrainCard from './TerrainCard';
 import { useCalendar } from '../CalendarContext';
 import * as api from '../api';
+import { computeQuickDueDate, formatQuickOffset } from '../noteDateUtils';
 
 function formatTime(hour) {
   const h = Math.floor(hour);
@@ -84,6 +85,44 @@ export default function TravelPanel() {
   const [viewingSessionId, setViewingSessionId] = useState(null);
   const [sessionNotes, setSessionNotes] = useState([]);
   const [noteText, setNoteText] = useState('');
+  const [noteHasDue, setNoteHasDue] = useState(false);
+  const [noteDueMode, setNoteDueMode] = useState('quick'); // 'quick' | 'relative' | 'absolute'
+  const [noteQuickDays, setNoteQuickDays] = useState(0);
+  const [noteQuickWeeks, setNoteQuickWeeks] = useState(0);
+  const [noteQuickMonths, setNoteQuickMonths] = useState(0);
+  const [noteDuration, setNoteDuration] = useState('');
+  const [noteUnit, setNoteUnit] = useState('days');
+  const [noteDueYear, setNoteDueYear] = useState('');
+  const [noteDueMonth, setNoteDueMonth] = useState('');
+  const [noteDueDay, setNoteDueDay] = useState('');
+
+  const resetNoteDueInputs = () => {
+    setNoteQuickDays(0);
+    setNoteQuickWeeks(0);
+    setNoteQuickMonths(0);
+    setNoteDuration('');
+    setNoteDueYear('');
+    setNoteDueMonth('');
+    setNoteDueDay('');
+  };
+
+  const bumpNoteQuick = (kind) => {
+    setNoteDueMode('quick');
+    if (kind === 'day') setNoteQuickDays((q) => q + 1);
+    else if (kind === 'week') setNoteQuickWeeks((q) => q + 1);
+    else setNoteQuickMonths((q) => q + 1);
+  };
+
+  const switchNoteMode = (mode) => {
+    if (mode === noteDueMode) return;
+    setNoteDueMode(mode);
+    resetNoteDueInputs();
+  };
+
+  const noteQuickPreview = state ? computeQuickDueDate(
+    { year: state.current_year, month: state.current_month, day: state.current_day_of_month },
+    noteQuickDays, noteQuickWeeks, noteQuickMonths, monthCount, getDaysForMonth
+  ) : null;
   const [climateZone, setClimateZone] = useState('boreal');
   const [clothingMod, setClothingMod] = useState('');
   const [coldGearItems, setColdGearItems] = useState([]);
@@ -345,7 +384,37 @@ export default function TravelPanel() {
     if (!noteText.trim() || !activeSession) return;
     try {
       await api.addSessionNote(activeSession.id, noteText.trim());
+      // If a due date is set, also cross-enter into the Notes tab
+      if (noteHasDue) {
+        const body = { text: noteText.trim() };
+        if (noteDueMode === 'quick' && noteQuickPreview) {
+          body.due_year = noteQuickPreview.year;
+          body.due_month = noteQuickPreview.month;
+          body.due_day = noteQuickPreview.day;
+          await api.createNote(body);
+        } else if (noteDueMode === 'relative') {
+          const dur = parseInt(noteDuration, 10);
+          if (dur && dur >= 1) {
+            body.duration = dur;
+            body.unit = noteUnit;
+            await api.createNote(body);
+          }
+        } else if (noteDueMode === 'absolute') {
+          const y = parseInt(noteDueYear, 10);
+          const m = parseInt(noteDueMonth, 10);
+          const d = parseInt(noteDueDay, 10);
+          if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+            body.due_year = y;
+            body.due_month = m;
+            body.due_day = d;
+            await api.createNote(body);
+          }
+        }
+      }
       setNoteText('');
+      setNoteHasDue(false);
+      setNoteDueMode('quick');
+      resetNoteDueInputs();
       await loadNotes();
     } catch (e) {
       console.error('Failed to add note:', e);
@@ -869,17 +938,139 @@ export default function TravelPanel() {
               <h3>Session Log</h3>
             </div>
             {isViewingActive && (
-              <div className="note-input-row">
-                <input
-                  className="form-control"
-                  type="text"
-                  placeholder="Add a note..."
-                  value={noteText}
-                  onChange={(e) => setNoteText(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleAddNote(); }}
-                />
-                <button className="btn btn-sm btn-primary" onClick={handleAddNote} disabled={!noteText.trim()}>Add</button>
-              </div>
+              <>
+                <div className="note-input-row">
+                  <input
+                    className="form-control"
+                    type="text"
+                    placeholder="Add a note..."
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddNote(); }}
+                  />
+                  <button className="btn btn-sm btn-primary" onClick={handleAddNote} disabled={!noteText.trim()}>Add</button>
+                </div>
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <label style={{ fontSize: '0.8rem', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                    <input
+                      type="checkbox"
+                      checked={noteHasDue}
+                      onChange={(e) => setNoteHasDue(e.target.checked)}
+                      style={{ marginRight: '0.4rem' }}
+                    />
+                    Track with due date (adds to Notes tab)
+                  </label>
+                </div>
+                {noteHasDue && (
+                  <div style={{ padding: '0.5rem 0.75rem', background: 'var(--bg-input)', borderRadius: '6px', border: '1px solid var(--border)', marginBottom: '0.75rem' }}>
+                    <div className="btn-row" style={{ marginBottom: '0.5rem' }}>
+                      <button
+                        className={`btn btn-sm ${noteDueMode === 'quick' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => bumpNoteQuick('day')}
+                      >
+                        +1 day
+                      </button>
+                      <button
+                        className={`btn btn-sm ${noteDueMode === 'quick' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => bumpNoteQuick('week')}
+                      >
+                        +1 week
+                      </button>
+                      <button
+                        className={`btn btn-sm ${noteDueMode === 'quick' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => bumpNoteQuick('month')}
+                      >
+                        +1 month
+                      </button>
+                      <button
+                        className={`btn btn-sm ${noteDueMode === 'relative' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => switchNoteMode('relative')}
+                      >
+                        In...
+                      </button>
+                      <button
+                        className={`btn btn-sm ${noteDueMode === 'absolute' ? 'btn-primary' : 'btn-secondary'}`}
+                        onClick={() => switchNoteMode('absolute')}
+                      >
+                        On date...
+                      </button>
+                      {noteDueMode === 'quick' && (noteQuickDays > 0 || noteQuickWeeks > 0 || noteQuickMonths > 0) && (
+                        <button className="btn btn-sm btn-secondary" onClick={resetNoteDueInputs}>Clear</button>
+                      )}
+                    </div>
+                    {noteDueMode === 'quick' ? (
+                      <div style={{ fontSize: '0.85rem', fontStyle: 'italic', color: 'var(--text-muted)' }}>
+                        {noteQuickPreview
+                          ? <>Due: {formatDate(noteQuickPreview.day, noteQuickPreview.month, noteQuickPreview.year)} <span style={{ fontSize: '0.75rem' }}>({formatQuickOffset(noteQuickDays, noteQuickWeeks, noteQuickMonths)})</span></>
+                          : 'Click +1 day, +1 week, or +1 month to set a due date.'}
+                      </div>
+                    ) : noteDueMode === 'relative' ? (
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <input
+                          type="number"
+                          className="form-control"
+                          style={{ width: '80px' }}
+                          min="1"
+                          placeholder="#"
+                          value={noteDuration}
+                          onChange={(e) => setNoteDuration(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleAddNote(); }}
+                        />
+                        <select
+                          className="form-control"
+                          style={{ width: 'auto' }}
+                          value={noteUnit}
+                          onChange={(e) => setNoteUnit(e.target.value)}
+                        >
+                          <option value="days">days</option>
+                          <option value="weeks">weeks</option>
+                          <option value="months">months</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-end' }}>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label>Year</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            style={{ width: '70px' }}
+                            value={noteDueYear}
+                            onChange={(e) => setNoteDueYear(e.target.value)}
+                            placeholder={state ? String(state.current_year) : ''}
+                          />
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label>Month</label>
+                          <select
+                            className="form-control"
+                            style={{ width: 'auto' }}
+                            value={noteDueMonth}
+                            onChange={(e) => setNoteDueMonth(e.target.value)}
+                          >
+                            <option value="">--</option>
+                            {HADEAN_MONTHS.slice(1).map((name, i) => (
+                              <option key={i + 1} value={i + 1}>{name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="form-group" style={{ margin: 0 }}>
+                          <label>Day</label>
+                          <input
+                            type="number"
+                            className="form-control"
+                            style={{ width: '70px' }}
+                            min="1"
+                            value={noteDueDay}
+                            onChange={(e) => setNoteDueDay(e.target.value)}
+                            placeholder="1"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </>
             )}
             <div className="scroll-section">
               {combinedEntries.length === 0 && <p className="text-muted">No log entries yet.</p>}

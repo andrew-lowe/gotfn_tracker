@@ -12,6 +12,7 @@ import encounterEntriesRouter from './routes/encounter-entries.js';
 import sessionsRouter from './routes/sessions.js';
 import calendarRouter from './routes/calendar.js';
 import coldGearRouter from './routes/cold-gear.js';
+import notesRouter from './routes/notes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -33,6 +34,7 @@ app.use('/api/encounter-entries', encounterEntriesRouter);
 app.use('/api/sessions', sessionsRouter);
 app.use('/api/calendar', calendarRouter);
 app.use('/api/cold-gear', coldGearRouter);
+app.use('/api/notes', notesRouter);
 
 // Serve built frontend in production
 const distPath = path.join(__dirname, '..', 'dist');

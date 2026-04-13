@@ -683,6 +683,12 @@ textarea.form-control {
   white-space: nowrap;
 }
 
+/* Note tracker overdue row */
+.data-table tr.note-overdue td {
+  background: rgba(239, 68, 68, 0.15);
+  color: var(--danger);
+}
+
 .note-delete-btn {
   background: none;
   border: none;

@@ -66,6 +66,11 @@ export const getColdGear = () => request('/cold-gear');
 export const createColdGear = (data) => request('/cold-gear', { method: 'POST', body: data });
 export const deleteColdGear = (id) => request(`/cold-gear/${id}`, { method: 'DELETE' });
 
+// Notes
+export const getNotes = () => request('/notes');
+export const createNote = (data) => request('/notes', { method: 'POST', body: data });
+export const deleteNote = (id) => request(`/notes/${id}`, { method: 'DELETE' });
+
 // Calendar
 export const getCalendar = () => request('/calendar');
 export const saveCalendar = (data) => request('/calendar', { method: 'PUT', body: data });
