@@ -7,12 +7,19 @@ import SessionManager from './components/SessionManager';
 import ReferenceCharts from './components/ReferenceCharts';
 import CalendarSettings from './components/CalendarSettings';
 import NoteTracker from './components/NoteTracker';
+import ModeSwitcher from './components/ModeSwitcher';
+import { useMode } from './ModeContext';
 
 export default function App() {
+  const { mode } = useMode();
+  const title = mode === 'underworld' ? 'Malgorgia — Underworld' : 'Forbidden North Tracker';
   return (
     <>
       <header className="app-header">
-        <h1>Forbidden North Tracker</h1>
+        <div className="app-header-row">
+          <h1>{title}</h1>
+          <ModeSwitcher />
+        </div>
         <nav className="app-nav">
           <NavLink to="/" end className={({ isActive }) => isActive ? 'active' : ''}>
             Travel
@@ -36,7 +43,7 @@ export default function App() {
             Terrain Settings
           </NavLink>
         </nav>
-      </header>
+        </header>
       <main className="app-main">
         <Routes>
           <Route path="/" element={<TravelPanel />} />

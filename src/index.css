@@ -17,6 +17,27 @@
   --shadow: rgba(0, 0, 0, 0.3);
 }
 
+/* Underworld theme — molten violets and phosphor greens.
+   Triggered by ModeContext writing data-mode="underworld" on <body>. */
+body[data-mode="underworld"] {
+  --bg-primary: #0d0815;
+  --bg-secondary: #1a0f28;
+  --bg-card: #231438;
+  --bg-input: #0a0512;
+  --text-primary: #e8d8f5;
+  --text-secondary: #b89ad0;
+  --text-muted: #6e5686;
+  --accent: #c05a1f;        /* molten amber */
+  --accent-hover: #e8762e;
+  --success: #4faf7f;       /* bioluminescent teal */
+  --warning: #d47a2a;       /* magma amber */
+  --danger: #c43838;
+  --info: #8b4fbf;          /* phosphor violet (grund lichen) */
+  --border: #3a1e5c;
+  --border-light: #5a2e7c;
+  --shadow: rgba(0, 0, 0, 0.6);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -702,4 +723,83 @@ textarea.form-control {
 .note-delete-btn:hover {
   color: var(--danger);
   opacity: 1;
+}
+
+/* ── Mode switcher ──────────────────────────────────────────── */
+.app-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.mode-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.75rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text-primary);
+  transition: all 0.18s ease;
+}
+
+.mode-switcher:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.mode-chip {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  background: var(--info);
+  color: var(--bg-primary);
+}
+
+.mode-switcher.mode-underworld .mode-chip {
+  background: var(--accent);
+  color: var(--bg-primary);
+}
+
+.mode-switch-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  letter-spacing: 0.04em;
+}
+
+/* Log mode chip */
+.log-mode-chip {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  margin-right: 0.4rem;
+  vertical-align: baseline;
+  background: var(--info);
+  color: var(--bg-primary);
+}
+
+.log-mode-chip.underworld {
+  background: var(--accent);
+}
+
+/* Underworld-only flair: faint molten glow on cards */
+body[data-mode="underworld"] .card {
+  box-shadow: 0 0 0 1px var(--border), inset 0 0 40px rgba(192, 90, 31, 0.03);
+}
+
+body[data-mode="underworld"] .app-header h1 {
+  background: linear-gradient(90deg, #c05a1f, #8b4fbf, #4faf7f);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }

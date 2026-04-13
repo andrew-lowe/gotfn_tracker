@@ -1,6 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useMode } from '../ModeContext';
+import UnderworldReference from './UnderworldReference';
 
 export default function ReferenceCharts() {
+  const { mode } = useMode();
+  const [tab, setTab] = useState(mode === 'underworld' ? 'underworld' : 'surface');
+
+  return (
+    <div>
+      <div className="tab-bar" style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+        <button
+          className={`btn ${tab === 'surface' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setTab('surface')}
+        >
+          Surface
+        </button>
+        <button
+          className={`btn ${tab === 'underworld' ? 'btn-primary' : 'btn-secondary'}`}
+          onClick={() => setTab('underworld')}
+        >
+          Underworld
+        </button>
+      </div>
+      {tab === 'underworld' ? <UnderworldReference /> : <SurfaceReference />}
+    </div>
+  );
+}
+
+function SurfaceReference() {
   return (
     <div>
       <div className="grid-2">

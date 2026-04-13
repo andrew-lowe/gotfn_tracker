@@ -19,7 +19,7 @@ async function request(path, options = {}) {
 }
 
 // Terrains
-export const getTerrains = () => request('/terrains');
+export const getTerrains = (mode) => request(mode ? `/terrains?mode=${encodeURIComponent(mode)}` : '/terrains');
 export const getTerrain = (id) => request(`/terrains/${id}`);
 export const createTerrain = (data) => request('/terrains', { method: 'POST', body: data });
 export const updateTerrain = (id, data) => request(`/terrains/${id}`, { method: 'PATCH', body: data });
@@ -47,6 +47,7 @@ export const resetDay = () => request('/travel/reset-day', { method: 'POST', bod
 export const getTravelLog = (limit = 50) => request(`/travel/log?limit=${limit}`);
 export const setTravelState = (data) => request('/travel/set-state', { method: 'POST', body: data });
 export const rollWeather = () => request('/travel/roll-weather', { method: 'POST', body: {} });
+export const rollWindSound = () => request('/travel/roll-wind-sound', { method: 'POST', body: {} });
 export const canUndo = () => request('/travel/can-undo');
 export const undo = () => request('/travel/undo', { method: 'POST', body: {} });
 
@@ -70,6 +71,12 @@ export const deleteColdGear = (id) => request(`/cold-gear/${id}`, { method: 'DEL
 export const getNotes = () => request('/notes');
 export const createNote = (data) => request('/notes', { method: 'POST', body: data });
 export const deleteNote = (id) => request(`/notes/${id}`, { method: 'DELETE' });
+
+// Mode / Underworld
+export const getMode = () => request('/mode');
+export const setMode = (mode) => request('/mode', { method: 'PUT', body: { mode } });
+export const setDepth = (depth_feet) => request('/mode/depth', { method: 'PUT', body: { depth_feet } });
+export const setUsingLight = (using_light) => request('/mode/light', { method: 'PUT', body: { using_light } });
 
 // Calendar
 export const getCalendar = () => request('/calendar');

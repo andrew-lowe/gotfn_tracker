@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import TerrainCard from './TerrainCard';
 import { useCalendar } from '../CalendarContext';
+import { useMode } from '../ModeContext';
 import * as api from '../api';
 import { computeQuickDueDate, formatQuickOffset } from '../noteDateUtils';
+import UnderworldEnvPanel from './UnderworldEnvPanel';
 
 function formatTime(hour) {
   const h = Math.floor(hour);
@@ -64,6 +66,8 @@ function adjustTemp(temp, shift) {
 
 export default function TravelPanel() {
   const { months: HADEAN_MONTHS, formatDate, getDaysForMonth, monthCount } = useCalendar();
+  const { mode: campaignMode } = useMode();
+  const isUnderworld = campaignMode === 'underworld';
   const [state, setState] = useState(null);
   const [terrain, setTerrain] = useState(null);
   const [travelSpeed, setTravelSpeed] = useState(null);
@@ -150,11 +154,11 @@ export default function TravelPanel() {
 
   const loadTerrains = useCallback(async () => {
     try {
-      setTerrains(await api.getTerrains());
+      setTerrains(await api.getTerrains(campaignMode));
     } catch (e) {
       console.error('Failed to load terrains:', e);
     }
-  }, []);
+  }, [campaignMode]);
 
   const loadLogs = useCallback(async (sessionId) => {
     try {
@@ -214,6 +218,13 @@ export default function TravelPanel() {
     loadSessions();
     loadColdGear();
   }, [loadState, loadTerrains, loadSessions, loadColdGear]);
+
+  // Mode changes clear terrain selection + weather (they're mode-specific)
+  useEffect(() => {
+    setSelectedTerrainId('');
+    setWeatherResult(null);
+    setLastResult(null);
+  }, [campaignMode]);
 
   useEffect(() => {
     if (viewingSessionId) {
@@ -751,9 +762,15 @@ export default function TravelPanel() {
           {lastResult && <ResultPanel result={lastResult} />}
         </div>
 
-        {/* Right column: Weather + Session Log */}
+        {/* Right column: Weather/Environment + Session Log */}
         <div>
-          {/* Weather Card */}
+          {isUnderworld ? (
+            <UnderworldEnvPanel
+              terrain={selectedTerrain}
+              onLog={() => loadLogs()}
+            />
+          ) : (
+          /* Weather Card */
           <div className="card">
             <div className="card-header">
               <h3>Weather</h3>
@@ -931,6 +948,7 @@ export default function TravelPanel() {
               <p className="text-muted">No weather rolled yet. Click "Roll Weather" to determine today's conditions.</p>
             )}
           </div>
+          )}
 
           {/* Session Log */}
           <div className="card">
@@ -1077,6 +1095,11 @@ export default function TravelPanel() {
               {combinedEntries.map((entry) => (
                 <div key={entry.id} className="log-entry">
                   <span className="log-time">{entry.log_day} {HADEAN_MONTHS[entry.log_month]} {formatTime(entry.hour)}</span>
+                  {entry.mode && (
+                    <span className={`log-mode-chip ${entry.mode === 'underworld' ? 'underworld' : ''}`}>
+                      {entry.mode === 'underworld' ? 'U' : 'S'}
+                    </span>
+                  )}
                   <span className={`log-category ${entry.category}`}>{entry.category}</span>
                   <span className="log-message">{entry.message}</span>
                   {entry._type === 'note' && (
